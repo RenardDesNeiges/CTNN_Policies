@@ -28,3 +28,49 @@ class RNNSequence(nn.Module):
             outputs.append(new_output)
         outputs = torch.stack(outputs, dim=1)  # return entire sequence
         return outputs
+    
+# LightningModule for training a RNNSequence module
+class SequenceLearner(pl.LightningModule):
+    def __init__(self, model, lr=0.005):
+        super().__init__()
+        self.model = model
+        self.lr = lr
+
+    def training_step(self, batch, batch_idx):
+        x, y = batch
+        y_hat = self.model.forward(x)
+        y_hat = y_hat.view_as(y)
+        loss = nn.MSELoss()(y_hat, y)
+        self.log("train_loss", loss, prog_bar=True)
+        return {"loss": loss}
+
+    def validation_step(self, batch, batch_idx):
+        x, y = batch
+        y_hat = self.model.forward(x)
+        y_hat = y_hat.view_as(y)
+        loss = nn.MSELoss()(y_hat, y)
+
+        self.log("val_loss", loss, prog_bar=True)
+        return loss
+
+    def test_step(self, batch, batch_idx):
+        # Here we just reuse the validation_step for testing
+        return self.validation_step(batch, batch_idx)
+
+    def configure_optimizers(self):
+        return torch.optim.Adam(self.model.parameters(), lr=self.lr)
+
+    def optimizer_step(
+        self,
+        current_epoch,
+        batch_nb,
+        optimizer,
+        optimizer_idx,
+        closure,
+        on_tpu=False,
+        using_native_amp=False,
+        using_lbfgs=False,
+    ):
+        optimizer.optimizer.step(closure=closure)
+        # Apply weight constraints
+        self.model.rnn_cell.apply_weight_constraints()
