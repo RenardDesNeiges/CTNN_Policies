@@ -9,3 +9,24 @@ Repository for my semester project at EPFL's Biorobotics Laboratory (BIOROB). Th
 - Week 4 : Implementing LTCs in ray, figuring out how to make BPTT work for RL (presumably using a PPO alg)
 - Week 5 : Running examples in ray
 - Week > 5 : end of the receding horizon, we will see later
+
+## Software Logistics : 
+
+To install the right environment, use conda and run the following command :
+
+```
+conda env create --name torchNCP --file=environment.yml
+```
+
+The following files are relevant for the project:
+
+```
+├── LTCRL                       # utilities module for RL with LTCs
+|   ├── __init__.py
+|   └── utils.py
+├── torch_NCP_example.ipynb     # supervised training examples
+└── data                        # test datasets
+    ├── climate
+    └── ozone
+```
+

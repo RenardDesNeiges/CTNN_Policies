@@ -52,6 +52,12 @@ class SequenceLearner(pl.LightningModule):
 
         self.log("val_loss", loss, prog_bar=True)
         return loss
+    
+    def predict(self, batch):
+        x, y = batch
+        y_hat = self.model.forward(x)
+        y_hat = y_hat.view_as(y)
+        return y_hat.detach().numpy() 
 
     def test_step(self, batch, batch_idx):
         # Here we just reuse the validation_step for testing
