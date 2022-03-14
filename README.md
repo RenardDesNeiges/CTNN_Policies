@@ -15,6 +15,7 @@ Open questions, this is quite an open ended project, this is where I store ideas
 - Proof Lyapunov stability of a closed loop system with LTCs under specific conditions
 - Study in the effect of network topology and size on the results, which topology to pick to control a complex system
 - Comparison with LSTMs and other RNNs
+- Comparison of search based v.s. gradient based RL
 - Get this to to work on a more complex environment (pybullet?)
 
 ## Software Installation and Organization : 
@@ -24,7 +25,7 @@ To install the right environment, use conda and install the following packages (
 ```
 conda env create --name torchNCP python=3.8
 conda activate torchNCP
-pip install torch keras-ncp gym "ray[rllib]" "gym[atari]" "gym[accept-rom-license]" atari_py matplotlib
+pip install torch keras-ncp gym "ray[rllib]" "gym[atari]" "gym[accept-rom-license]" atari_py matplotlib  pytorch-lightning
 conda install pandas
 conda install jupyter
 ```
