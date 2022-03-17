@@ -14,7 +14,7 @@ Repository for my semester project at EPFL's Biorobotics Laboratory (BIOROB). Th
 Open questions, this is quite an open ended project, this is where I store ideas where this might go :
 - Proof Lyapunov stability of a closed loop system with LTCs under specific conditions
 - Study in the effect of network topology and size on the results, which topology to pick to control a complex system
-- Comparison with LSTMs and other RNNs
+- Comparison with LSTMs and other RNNs maybe Neural ODE
 - Comparison of search based v.s. gradient based RL
 - Get this to to work on a more complex environment (pybullet?)
 
@@ -25,7 +25,7 @@ To install the right environment, use conda and install the following packages (
 ```
 conda env create --name torchNCP python=3.8
 conda activate torchNCP
-pip install torch keras-ncp gym "ray[rllib]" "gym[atari]" "gym[accept-rom-license]" atari_py matplotlib  pytorch-lightning
+pip install torch keras-ncp gym "ray[rllib]" "gym[atari]" "gym[accept-rom-license]" atari_py matplotlib  pytorch-lightning box2d pybullet
 conda install pandas
 conda install jupyter
 ```
