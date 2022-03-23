@@ -12,12 +12,12 @@ ray.init(local_mode=False) # local mode = true : binds everything to a single pr
 
 ModelCatalog.register_custom_model("naiveRNN", models.NaiveRNN)
 
-config = {
+rnn_config = {
     # Environment (RLlib understands openAI gym registered strings).
     "env": "CartPole-v1",
     # Use 2 environment workers (aka "rollout workers") that parallelly
     # collect samples from their own environment clone(s).
-    "num_workers": 1,
+    "num_workers": 4,
     # Change this to "framework: torch", if you are using PyTorch.
     # Also, use "framework: tf2" for tf2.x eager execution.
     "framework": "torch",
@@ -25,10 +25,7 @@ config = {
     # given the environment's observation- and action spaces.
     "model": {
         "custom_model": "naiveRNN",
-        "max_seq_len": 20,
-        "custom_model_config": {
-            "cell_size": 32,
-        },
+        "max_seq_len": 10,
     },
     # Set up a separate evaluation worker set for the
     # `trainer.evaluate()` call after training (see below).
@@ -40,7 +37,7 @@ config = {
 }
 
 # Instanciate the PPO trainer object
-trainer = PPOTrainer(config=config)
+trainer = PPOTrainer(config=rnn_config)
 
 
 # Run it for n training iterations. A training iteration includes
@@ -49,10 +46,10 @@ trainer = PPOTrainer(config=config)
 log = []
 iterations = 1
 for i in range(iterations):
-    print("iteration : " +str(i), ", ")
+    print("iteration : " +str(i),  ", ")
     log.append(trainer.train())
     print('len : ' + str(log[i]['episode_len_mean']))
     print('avg_rev : ' + str(np.array(log[i]['hist_stats']['episode_reward']).mean()))
     # if i % 5 == 0:
         # trainer.evaluate()exi
-        # trainer.evaluate()
+        # trainer.evaluate() 
