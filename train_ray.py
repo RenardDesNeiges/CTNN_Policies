@@ -8,24 +8,26 @@ import LTCRL.models as models           # RayRLlib model implementations
 from ray.rllib.examples.models.rnn_model import TorchRNNModel
 
 
-ray.init(local_mode=False) # local mode = true : binds everything to a single process which enables easier debug
+ray.init(local_mode=True) # local mode = true : binds everything to a single process which enables easier debug
 
 ModelCatalog.register_custom_model("naiveRNN", models.NaiveRNN)
+
+ModelCatalog.register_custom_model("LTC", models.LTC)
 
 rnn_config = {
     # Environment (RLlib understands openAI gym registered strings).
     "env": "CartPole-v1",
     # Use 2 environment workers (aka "rollout workers") that parallelly
     # collect samples from their own environment clone(s).
-    "num_workers": 4,
+    "num_workers": 1,
     # Change this to "framework: torch", if you are using PyTorch.
     # Also, use "framework: tf2" for tf2.x eager execution.
     "framework": "torch",
     # Tweak the default model provided automatically by RLlib,
     # given the environment's observation- and action spaces.
     "model": {
-        "custom_model": "naiveRNN",
-        "max_seq_len": 10,
+        "custom_model": "LTC",
+        "custom_model_config": {"sample_frequency": 50},
     },
     # Set up a separate evaluation worker set for the
     # `trainer.evaluate()` call after training (see below).
@@ -50,6 +52,3 @@ for i in range(iterations):
     log.append(trainer.train())
     print('len : ' + str(log[i]['episode_len_mean']))
     print('avg_rev : ' + str(np.array(log[i]['hist_stats']['episode_reward']).mean()))
-    # if i % 5 == 0:
-        # trainer.evaluate()exi
-        # trainer.evaluate() 

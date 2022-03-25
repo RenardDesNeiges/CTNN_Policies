@@ -66,23 +66,122 @@ class NaiveRNN(TorchRNN, nn.Module):
         return action_out, lh
 
 
-
+"""
+    Ray RLLlib class implementing a Liquid Time Constant neural network, the style of the implemenation is really similar to the one found in the implementation of the NCP paper (https://github.com/mlech26l/keras-ncp) but it is build for RL with a action branch/value branch arch for actor critic methods
+"""
 class LTC(TorchRNN, nn.Module):
     def __init__(self,
                  obs_space,
                  action_space,
                  num_outputs,
                  model_config,
-                 name):
+                 name,
+                 **kwargs):
         
         nn.Module.__init__(self)
         super().__init__(obs_space, action_space, num_outputs, model_config, name)
 
+        self.obs_size = get_preprocessor(obs_space)(obs_space).size
+
         # TODO : process the relevant parameters here
+        
+        # parsing model kwargs : 
         self.elapsed_time = 0.2 #kind of a random value, think about this 
+        if 'sample_frequency' in kwargs:
+            self.elapsed_time = 1/kwargs['sample_frequency']
         
         # TODO : declare the nn functional stuff here
     
+    # Utility function to add weights to the model
+    def add_weight(self, name, init_value):
+        param = torch.nn.Parameter(init_value)
+        self.register_parameter(name, param)
+        return param
+
+    
+    # TODO : parameter allocation routine here
+    def _allocate_parameters(self):
+        
+        print("alloc!")
+        self._params = {}
+        self._params["gleak"] = self.add_weight(
+            name="gleak", init_value=self._get_init_value((self.state_size,), "gleak")
+        )
+        self._params["vleak"] = self.add_weight(
+            name="vleak", init_value=self._get_init_value((self.state_size,), "vleak")
+        )
+        self._params["cm"] = self.add_weight(
+            name="cm", init_value=self._get_init_value((self.state_size,), "cm")
+        )
+        self._params["sigma"] = self.add_weight(
+            name="sigma",
+            init_value=self._get_init_value(
+                (self.state_size, self.state_size), "sigma"
+            ),
+        )
+        self._params["mu"] = self.add_weight(
+            name="mu",
+            init_value=self._get_init_value((self.state_size, self.state_size), "mu"),
+        )
+        self._params["w"] = self.add_weight(
+            name="w",
+            init_value=self._get_init_value((self.state_size, self.state_size), "w"),
+        )
+        self._params["erev"] = self.add_weight(
+            name="erev",
+            init_value=torch.Tensor(self._wiring.erev_initializer()),
+        )
+        self._params["sensory_sigma"] = self.add_weight(
+            name="sensory_sigma",
+            init_value=self._get_init_value(
+                (self.sensory_size, self.state_size), "sensory_sigma"
+            ),
+        )
+        self._params["sensory_mu"] = self.add_weight(
+            name="sensory_mu",
+            init_value=self._get_init_value(
+                (self.sensory_size, self.state_size), "sensory_mu"
+            ),
+        )
+        self._params["sensory_w"] = self.add_weight(
+            name="sensory_w",
+            init_value=self._get_init_value(
+                (self.sensory_size, self.state_size), "sensory_w"
+            ),
+        )
+        self._params["sensory_erev"] = self.add_weight(
+            name="sensory_erev",
+            init_value=torch.Tensor(self._wiring.sensory_erev_initializer()),
+        )
+
+        self._params["sparsity_mask"] = torch.Tensor(
+            np.abs(self._wiring.adjacency_matrix)
+        )
+        self._params["sensory_sparsity_mask"] = torch.Tensor(
+            np.abs(self._wiring.sensory_adjacency_matrix)
+        )
+
+        if self._input_mapping in ["affine", "linear"]:
+            self._params["input_w"] = self.add_weight(
+                name="input_w",
+                init_value=torch.ones((self.sensory_size,)),
+            )
+        if self._input_mapping == "affine":
+            self._params["input_b"] = self.add_weight(
+                name="input_b",
+                init_value=torch.zeros((self.sensory_size,)),
+            )
+
+        if self._output_mapping in ["affine", "linear"]:
+            self._params["output_w"] = self.add_weight(
+                name="output_w",
+                init_value=torch.ones((self.motor_size,)),
+            )
+        if self._output_mapping == "affine":
+            self._params["output_b"] = self.add_weight(
+                name="output_b",
+                init_value=torch.zeros((self.motor_size,)),
+            )
     
     # TODO : pytorch sigmoid implementation 
     def _sigmoid(self, v_pre, mu, sigma):
@@ -94,9 +193,9 @@ class LTC(TorchRNN, nn.Module):
 
     # TODO : input mapping function
     def _map_inputs(self, inputs):
-        pass
+        inputs = inputs * self._params["input_w"] + self._params["input_b"]
     
-    # TODO : output mapping function
+    # TODO : output mapping function (should return an action and a value branch)
     def _map_outputs(self, state):
         
         pass
@@ -104,7 +203,7 @@ class LTC(TorchRNN, nn.Module):
         value = 0
         return action, value
 
-    # TODO implement
+    # TODO implement the init states function (should return a tensor of hidden states size)
     @override(ModelV2)
     def get_initial_state(self):
         pass
