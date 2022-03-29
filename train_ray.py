@@ -16,7 +16,7 @@ ModelCatalog.register_custom_model("LTC", models.LTC)
 
 rnn_config = {
     # Environment (RLlib understands openAI gym registered strings).
-    "env": "CartPole-v1",
+    "env": "Pendulum-v1",
     # Use 2 environment workers (aka "rollout workers") that parallelly
     # collect samples from their own environment clone(s).
     "num_workers": 1,
@@ -27,7 +27,12 @@ rnn_config = {
     # given the environment's observation- and action spaces.
     "model": {
         "custom_model": "LTC",
-        "custom_model_config": {"sample_frequency": 50},
+        "custom_model_config": 
+            {"sample_frequency": 9,
+             "state_size": 12,
+             "ode_unfolds": 5,
+             "epsilon": 1e-8,
+             },
     },
     # Set up a separate evaluation worker set for the
     # `trainer.evaluate()` call after training (see below).
