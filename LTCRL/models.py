@@ -52,7 +52,9 @@ class NaiveRNN(TorchRNN, nn.Module):
     @override(ModelV2)
     def value_function(self):
         assert self._features is not None, "must call forward() first"
-        return torch.reshape(self.value_branch(self._features), [-1])
+        val = torch.reshape(self.value_branch(self._features), [-1])
+        #print("value shape = {}".format(val.shape))
+        return val
 
     @override(TorchRNN)
     def forward_rnn(self, inputs, state, seq_lens):
@@ -67,7 +69,7 @@ class NaiveRNN(TorchRNN, nn.Module):
         action_out = self.action_branch(self._features)
         
         lh = list(h.squeeze(0).swapaxes(0,1))
-        
+        #print("inputs : {}, next state : {}, len(lh) : {}, lh shape : {} , actions : {}".format(inputs.shape, h.shape, len(lh), lh[0].shape, action_out.shape))
         return action_out, lh
 
 
@@ -102,7 +104,7 @@ class LTC(TorchRNN, nn.Module):
         # parsing model kwargs : 
         self._parse_kwargs(kwargs)
         self._obs_size = get_preprocessor(obs_space)(obs_space).size
-        self._action_size = get_preprocessor(obs_space)(obs_space).size
+        self._action_size = num_outputs
         self._wiring = kncp.wirings.FullyConnected(self.state_size,self._action_size) # build the LTC wiring object
 
         # we need to build the wiring before using it
@@ -114,7 +116,8 @@ class LTC(TorchRNN, nn.Module):
         
         self._allocate_parameters()
         
-        
+        self.value_branch = nn.Linear(self.state_size, 1)
+
         pass
         # TODO : declare the nn functional stuff here
     
@@ -227,6 +230,15 @@ class LTC(TorchRNN, nn.Module):
             name="output_b",
             init_value=torch.zeros((self._action_size,)),
         )
+
+        self._params["value_w"] = self.add_weight(
+            name="output_w",
+            init_value=torch.ones((self._action_size,)),
+        )
+        self._params["output_b"] = self.add_weight(
+            name="output_b",
+            init_value=torch.zeros((self._action_size,)),
+        )
         
         # TODO : action branch params (a and b)
 
@@ -240,7 +252,7 @@ class LTC(TorchRNN, nn.Module):
     # FUSED step ODE solver
     def _ode_solver(self, inputs, state, elapsed_time):
         v_pre = state
-
+        # sensory_inputs = 
         # We can pre-compute the effects of the sensory neurons here
         sensory_w_activation = self._params["sensory_w"] * self._sigmoid(
             inputs, self._params["sensory_mu"], self._params["sensory_sigma"]
@@ -268,9 +280,9 @@ class LTC(TorchRNN, nn.Module):
 
             rev_activation = w_activation * self._params["erev"]
 
-            # Reduce over dimension 1 (=source neurons) # TODO : what the fuck is going on there, which step of the fused solver is that ?
-            w_numerator = torch.sum(rev_activation, dim=2) + w_numerator_sensory
-            w_denominator = torch.sum(w_activation, dim=2) + w_denominator_sensory
+            # Reduce over dimension 1 (=source neurons)
+            w_numerator = torch.sum(rev_activation, dim=1) + w_numerator_sensory
+            w_denominator = torch.sum(w_activation, dim=1) + w_denominator_sensory
 
             numerator = (
                 cm_t * v_pre
@@ -289,44 +301,99 @@ class LTC(TorchRNN, nn.Module):
         inputs = inputs * self._params["input_w"] + self._params["input_b"]
         return inputs
     
-    # TODO : output mapping function (should return an action and a value branch)
+    # output mapping function (returns to the action branch)
     def _map_outputs(self, state):
         
         action = state
         if self._action_size < self.state_size:
-            action = action[:,:, 0 : self._action_size]  # slice
+            action = action[:, 0 : self._action_size]  # slice
 
         action = action * self._params["output_w"] + self._params["output_b"] # affine mapping
 
-        return action, 0
+        return action
 
-    # TODO implement the init states function (should return a tensor of hidden states size)
+    # init network states
     @override(ModelV2)
     def get_initial_state(self):
         
         # TODO : find some way to set the device
         h = torch.zeros(
-            (1, self.state_size))
+            (1, self.state_size)).squeeze(0)
 
         return h
 
-    # TODO think of a relevant value function
+    # value function
     @override(ModelV2)
     def value_function(self):
-        pass
+        # TODO : fix the value branch
+    
+        assert self._features is not None, "must call forward() first"
+        val = torch.reshape(self.value_branch(self._features), [-1])
+        #print("value shape = {}".format(val.shape))
+        return val
+        # return torch.sum(self.value_branch(self._features),dim=1)
+        
 
     # TODO implement the LTC forward pass
     @override(TorchRNN)
     def forward_rnn(self, inputs, state, seq_lens):
         """
-            Forward pass throught the RNN
+            Forward pass throught the LTC Cell, constructs time sequences 
+            that can be trained with through backpropagation through time [BPTT]
+            ----------------------------------------------------------------
+            arguments : 
+                inputs      <-  (BATCH_SIZE x SEQ_LEN x OBS_SIZE) torch tensor
+                                inputs in time along the rnn sequence
+                state       <-  STATE_SIZE list of (BATCH_SIZE) torch tensors 
+                                gives state at the begining of the RNN sequences
+                                (for some obscure rllib reason)
+                seq_lens    <-  (BATCH_SIZE) torch tensor containing
+                                sequence lens for each seq in the batch
+            ----------------------------------------------------------------
+            outputs :
+                action      <-  (BATCH_SIZE x SEQ_LEN x ACTION_SIZE) torch tensor
+                                outputs in time along the rnn sequence
+                                this is then processe by the action distribution
+                lh          <-  STATE_SIZE list of (BATCH_SIZE) torch tensors 
+                                state at the end of the RNN sequences
+                                (for some obscure rllib reason)
         """
         
-        state = torch.stack(state,1) # still no idea what's the deal with the single element tensor array
         
-        inputs = self._map_inputs(inputs) # input mapping
-        next_state = self._ode_solver(inputs, state, self.elapsed_time) # compute the ODE step
-        action, _ = self._map_outputs(next_state) # compute the ODE step
+        device = inputs.device
+        batch_size = inputs.size(0)
+        seq_len = inputs.size(1)
+        
+        # states should be :  states * (seq)
+        actions = []
+        self._features = []
+        next_state = torch.stack(state,1)
+        for i in range(seq_len):
+            I_t = self._map_inputs(torch.squeeze(inputs[:,i,:],1)) # input mapping
+            next_state = self._ode_solver(I_t, next_state, self.elapsed_time) # compute the ODE step 
+            new_action = self._map_outputs(next_state) # compute the ODE step
+            actions.append(new_action)
+            self._features.append(next_state)
+        
+        action = torch.stack(actions,1)
+        self._features = torch.stack(self._features,1)
+        lh = list(next_state.swapaxes(0,1))
+        #print("inputs : {}, next state : {}, len(lh) : {}, lh shape : {}, actions : {}".format(inputs.shape, next_state.shape, len(lh), lh[0].shape, action.shape))
                 
-        return action, next_state
+        return action, lh
+        # lh should be :  states * (seq)
+        # actions should be : 
 
+    # def forward(self, x): # just recursively constructs a time-sequence with outputs that cover the entire sequence (which is required for BPTT)
+    #     # device = x.device
+    #     # batch_size = x.size(0)
+    #     # seq_len = x.size(1)
+    #     # hidden_state = torch.zeros(
+    #     #     (batch_size, self.rnn_cell.state_size), device=device
+    #     # )
+    #     outputs = []
+    #     for t in range(seq_len):
+    #         inputs = x[:, t]
+    #         new_output, hidden_state = self.rnn_cell.forward(inputs, hidden_state)
+    #         outputs.append(new_output)
+    #     outputs = torch.stack(outputs, dim=1)  # return entire sequence

@@ -10,7 +10,7 @@ from ray.rllib.examples.models.rnn_model import TorchRNNModel
 
 ray.init(local_mode=True) # local mode = true : binds everything to a single process which enables easier debug
 
-ModelCatalog.register_custom_model("naiveRNN", models.NaiveRNN)
+ModelCatalog.register_custom_model("RNN", models.NaiveRNN)
 
 ModelCatalog.register_custom_model("LTC", models.LTC)
 
