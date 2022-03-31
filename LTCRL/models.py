@@ -340,6 +340,7 @@ class LTC(TorchRNN, nn.Module):
         """
             Forward pass throught the LTC Cell, constructs time sequences 
             that can be trained with through backpropagation through time [BPTT]
+            by just running gradient descent on 
             ----------------------------------------------------------------
             arguments : 
                 inputs      <-  (BATCH_SIZE x SEQ_LEN x OBS_SIZE) torch tensor
@@ -372,7 +373,7 @@ class LTC(TorchRNN, nn.Module):
             I_t = self._map_inputs(torch.squeeze(inputs[:,i,:],1)) # input mapping
             next_state = self._ode_solver(I_t, next_state, self.elapsed_time) # compute the ODE step 
             new_action = self._map_outputs(next_state) # compute the ODE step
-            actions.append(new_action)
+            actions.append(new_action+self._epsilon) # TO avoid ouputting nans
             self._features.append(next_state)
         
         action = torch.stack(actions,1)
@@ -381,19 +382,3 @@ class LTC(TorchRNN, nn.Module):
         #print("inputs : {}, next state : {}, len(lh) : {}, lh shape : {}, actions : {}".format(inputs.shape, next_state.shape, len(lh), lh[0].shape, action.shape))
                 
         return action, lh
-        # lh should be :  states * (seq)
-        # actions should be : 
-
-    # def forward(self, x): # just recursively constructs a time-sequence with outputs that cover the entire sequence (which is required for BPTT)
-    #     # device = x.device
-    #     # batch_size = x.size(0)
-    #     # seq_len = x.size(1)
-    #     # hidden_state = torch.zeros(
-    #     #     (batch_size, self.rnn_cell.state_size), device=device
-    #     # )
-    #     outputs = []
-    #     for t in range(seq_len):
-    #         inputs = x[:, t]
-    #         new_output, hidden_state = self.rnn_cell.forward(inputs, hidden_state)
-    #         outputs.append(new_output)
-    #     outputs = torch.stack(outputs, dim=1)  # return entire sequence

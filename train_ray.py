@@ -19,7 +19,7 @@ rnn_config = {
     "env": "Pendulum-v1",
     # Use 2 environment workers (aka "rollout workers") that parallelly
     # collect samples from their own environment clone(s).
-    "num_workers": 1,
+    "num_workers": 8,
     # Change this to "framework: torch", if you are using PyTorch.
     # Also, use "framework: tf2" for tf2.x eager execution.
     "framework": "torch",
