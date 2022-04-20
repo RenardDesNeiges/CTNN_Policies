@@ -8,8 +8,8 @@ import LTCRL.models as models
 ModelCatalog.register_custom_model("RNN", models.NaiveRNN)
 ModelCatalog.register_custom_model("LTC", models.LTC)
 
-NUM_CPUS = 8 # changed based on PC / cluster
-num_samples_each_worker = int(16384 / NUM_CPUS)
+NUM_CPUS = 23 # changed based on PC / cluster
+num_samples_each_worker = int(65536 / NUM_CPUS)
 
 
 model = {
@@ -30,7 +30,7 @@ config = {
     # If true, use the Generalized Advantage Estimator (GAE)
     # with a value function, see https://arxiv.org/pdf/1506.02438.pdf.
     "use_gae": True,
-    "lr": 1e-4,
+    "lr": 5e-5,
     "env": "CartPole-v1", # Environment
     "num_workers": NUM_CPUS, # number of worker envs
     "train_batch_size": NUM_CPUS*num_samples_each_worker, 
@@ -52,8 +52,7 @@ config = {
     "sgd_minibatch_size": 256,
     "framework": "torch", # we run pytorch, not tensorflow
     "model": model,
-    "evaluation_interval": 20,
-    "evaluation_num_workers": 1,
+    "evaluation_num_workers": 0,
     # Only for evaluation runs, render the env.
     "evaluation_config": {
         "render_env": False,
