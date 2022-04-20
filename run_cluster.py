@@ -45,7 +45,7 @@ header =  \
 #SBATCH --mem={}GB \n\
 #SBATCH --nodes=1 \n\
 #SBATCH --tasks-per-node=1 \n\
-#SBATCH --time=00:{}:00 \n".format(JOBNAME,logpath,NODE,cpu,mem,MAX_TIME)
+#SBATCH --time={}:00:00 \n".format(JOBNAME,logpath,NODE,cpu,mem,MAX_TIME)
 
 head_address =  \
 'set -x \n\

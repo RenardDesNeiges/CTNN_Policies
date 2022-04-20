@@ -8,7 +8,7 @@ import LTCRL.models as models
 ModelCatalog.register_custom_model("RNN", models.NaiveRNN)
 ModelCatalog.register_custom_model("LTC", models.LTC)
 
-NUM_CPUS = 8 # changed based on PC / cluster
+NUM_CPUS = 23 # changed based on PC / cluster
 num_samples_each_worker = int(4096 / NUM_CPUS)
 
 
