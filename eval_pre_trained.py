@@ -1,6 +1,7 @@
 import ray
 from ray import tune
 from ray.rllib.agents.marwil import MARWILTrainer
+from ray.rllib.agents.ppo import PPOTrainer
 from ray.rllib.models import ModelCatalog
 import LTCRL.models as models
 
@@ -8,13 +9,13 @@ import LTCRL.models as models
 ModelCatalog.register_custom_model("RNN", models.NaiveRNN)
 ModelCatalog.register_custom_model("LTC", models.LTC)
 
-NUM_CPUS = 1 # changed based on PC / cluster
-num_samples_each_worker = 2048 # int(32768 / NUM_CPUS)
+NUM_CPUS = 0 # changed based on PC / cluster
+num_samples_each_worker = 0
 
 eval_freq = 2
 
-# input_directory = "~/ray_results/perceptron_baseline"
-input_directory = "~/ray_results/RNN_baseline"
+
+input_file = "/Users/renard/ray_results/MARWILTrainer_2022-04-18_20-23-30/MARWILTrainer_CartPole-v1_a5ec6_00000_0_2022-04-18_20-23-30/checkpoint_000095/checkpoint-95"
 
 model = {
         "custom_model": "LTC",
@@ -28,19 +29,9 @@ model = {
 
 # environment config
 config = {
-    "input": input_directory, # Expert policy data file
+    "input": "~/ray_results/perceptron_baseline", # Expert policy data file
     "env": "CartPole-v1", # Environment
     # "model" : model,
-    "model": {
-        "custom_model": "RNN",
-        "max_seq_len": 50,
-        # "custom_model_config": 
-        #     {"sample_frequency": 10,
-        #     "state_size": 8,
-        #     "ode_unfolds": 5,
-        #     "epsilon": 1e-8,
-        #     },
-        },
     "framework": "torch", 
     # No need to calculate advantages (or do anything else with the
     # rewards).
@@ -49,8 +40,6 @@ config = {
     # behavioral cloning.
     "postprocess_inputs": False,
     # No reward estimation.
-    "_disable_execution_plan_api": False,
-    # "replay_sequence_length": 30,
     "input_evaluation": [],
     
     # Parralelization stuff
@@ -63,18 +52,21 @@ config = {
     # Only for evaluation runs, render the env.
     "evaluation_config": {
         "render_env": True,
+        "steps" : 100,
+        "episodes" : 1,
     },
-    
-    # === Replay Settings ===
-    # The number of contiguous environment steps to replay at once. This may
-    # be set to greater than 1 to support recurrent models.
-    # "replay_sequence_length": 1,
 }
 
+
 # ray code
-ray.init(local_mode=True)
+ray.init(local_mode=False)
 # Instanciate the PPO trainer object
-tune.run(MARWILTrainer, config=config, 
-        checkpoint_freq=1,checkpoint_at_end=True)
+trainer = MARWILTrainer(config=config)
+
+# trainer = PPOTrainer(config=config)
+trainer.load_checkpoint(input_file)
+trainer.evaluate()
+print("Success!")
 
 
+ 

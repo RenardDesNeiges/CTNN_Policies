@@ -5,7 +5,7 @@ from ray.rllib.models import ModelCatalog
 import LTCRL.models as models
 
 #where to save the generated trajectory
-output_directory = "~/ray_results/perceptron_baseline"
+output_directory = "~/ray_results/RNN_baseline"
 
 # register the rllib models
 ModelCatalog.register_custom_model("RNN", models.NaiveRNN)
@@ -16,12 +16,22 @@ num_samples_each_worker = int(16384 / NUM_CPUS)
 
 # environment config (PPO tune baselines)
 config = {
+    "model": {
+        "custom_model": "RNN",
+        "max_seq_len": 50,
+        # "custom_model_config": 
+        #     {"sample_frequency": 10,
+        #     "state_size": 8,
+        #     "ode_unfolds": 5,
+        #     "epsilon": 1e-8,
+        #     },
+        },
     "num_envs_per_worker": 1, 
     "use_critic": True,
     # If true, use the Generalized Advantage Estimator (GAE)
     # with a value function, see https://arxiv.org/pdf/1506.02438.pdf.
     "use_gae": True,
-    "lr": 1e-4,
+    "lr": 3e-5,
     "ignore_worker_failures": True,
     "env": "CartPole-v1", # Environment
     "num_workers": NUM_CPUS, # number of worker envs
@@ -44,7 +54,7 @@ config = {
     "sgd_minibatch_size": 256,
     "framework": "torch", # we run pytorch, not tensorflow
     "evaluation_interval": 20,
-    "evaluation_num_workers": 1,
+    "evaluation_num_workers": 0,
     # Only for evaluation runs, render the env.
     "output": output_directory,
     "evaluation_config": {

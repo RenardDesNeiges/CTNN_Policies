@@ -36,7 +36,7 @@ config = {
     "train_batch_size": NUM_CPUS*num_samples_each_worker, 
     "num_sgd_iter": 10,
     "rollout_fragment_length": num_samples_each_worker,
-    
+    # Either "adam" or "rmsprop".
     "vf_loss_coeff": 0.5,
     "lambda":0.95, 
     "grad_clip": 0.5, 
