@@ -31,12 +31,13 @@ config = {
     # with a value function, see https://arxiv.org/pdf/1506.02438.pdf.
     "use_gae": True,
     "lr": 1e-4,
+    "ignore_worker_failures": True,
     "env": "CartPole-v1", # Environment
     "num_workers": NUM_CPUS, # number of worker envs
     "train_batch_size": NUM_CPUS*num_samples_each_worker, 
     "num_sgd_iter": 10,
     "rollout_fragment_length": num_samples_each_worker,
-    
+    # Either "adam" or "rmsprop".
     "vf_loss_coeff": 0.5,
     "lambda":0.95, 
     "grad_clip": 0.5, 
