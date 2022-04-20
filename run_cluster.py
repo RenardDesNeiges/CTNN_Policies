@@ -84,9 +84,7 @@ echo "Starting HEAD at $head_node"\n\
 ##srun --nodes=1 --ntasks=1 -w "$head_node" \n\
 ##    ray start --head --node-ip-address="$head_node_ip" --port=$port \n\
 ##    --num-cpus "${SLURM_CPUS_PER_TASK}" --num-gpus "${SLURM_GPUS_PER_TASK}" --block &\n\
-srun --nodes=1 --ntasks=1 -w "$head_node" \n\
-    /shared/renard/conda/envs/torchLTC/bin/ray start --head --node-ip-address="$head_node_ip" --port=$port \n\
-    --num-cpus "${SLURM_CPUS_PER_TASK}" --block &\n\
+srun --nodes=1 --ntasks=1 -w "$head_node" /shared/renard/conda/envs/torchLTC/bin/ray start --head --node-ip-address="$head_node_ip" --port=$port --num-cpus "${SLURM_CPUS_PER_TASK}" --block &\n\
 # __doc_head_ray_end__\n\
 \n\
 # __doc_worker_ray_start__\n\
@@ -99,10 +97,7 @@ worker_num=$((SLURM_JOB_NUM_NODES - 1))\n\
 for ((i = 1; i <= worker_num; i++)); do\n\
     node_i=${nodes_array[$i]}\n\
     echo "Starting WORKER $i at $node_i"\n\
-    srun --nodes=1 --ntasks=1 -w "$node_i" \n\
-        ray start --address "$ip_head" \n\
-        --num-cpus "${SLURM_CPUS_PER_TASK}" --num-gpus "${SLURM_GPUS_PER_TASK}" --block &\n\
-    sleep 5\n\
+    srun --nodes=1 --ntasks=1 -w "$node_i" ray start --address "$ip_head" --num-cpus "${SLURM_CPUS_PER_TASK}" --num-gpus "${SLURM_GPUS_PER_TASK}" --block & sleep 5\n\
 done\n\
 # __doc_worker_ray_end__ \n'
 
